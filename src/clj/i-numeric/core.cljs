@@ -8,40 +8,41 @@
 ;; (defonce conn
 ;;   (repl/connect "http://localhost:9000/repl"))
 
-;;(defn keydown-handler
-;;  [evt]
-;;  (let [e (dom/get-evt evt)
-;;        el (dom/get-target e)
-;;        key-code (dom/get-key-code e)
-;;        attr (partial dom/attr el)
-;;        value (dom/prop el "value")
-;;        num-value (js/parseInt (if (or (nil? value) (empty? value)) "0" value))
-;;        min-val (attr "min")
-;;        max-val (attr "max")
-;;        precision (attr "precision")
-;;        step (attr "step")
-;;        overflow? (partial pred/overflow? min-val max-val)]
-;;    (when
-;;      (ikey/num-key? key-code)
-;;      (str value (ikey/to-num key-code)))
-;;    (when
-;;      (ikey/arrow-down? key-code)
-;;      (- num-value step))
-;;    (when
-;;      (ikey/arrow-up? key-code)
-;;      (+ num-value step))
-;;
-;;    (cond
-;;            (do
-;;        (if (overflow? (str value (ikey/to-num key-code)))
-;;          (dom/prevent-default! e))
+(def ^:const STEP 1)
+(defn ^:const WITH-CTRL 0.1)
+(defn ^:const WITH-SHIFT 10)
+
+(defn keydown-handler
+  [evt]
+  (let [e (dom/get-evt evt)
+        el (dom/get-target e)
+        key-code (dom/get-key-code e)
+        attr (partial dom/attr el)
+        value (dom/prop el "value")
+        num-value (js/parseInt (if (or (nil? value) (empty? value)) "0" value))
+        min-val (attr "min")
+        max-val (attr "max")
+        precision (attr "precision")
+        step (attr "step" STEP)
+        overflow? (partial pred/overflow? min-val max-val)]
+    (if
+      (overflow?
+        (cond
+          (ikey/num-key? key-code)    (str value (ikey/to-num key-code))
+          (ikey/arrow-up? key-code)   (+ num-value (* (cond (dom/with-ctrl? e) WITH-CTRL
+                                                            (dom/with-shift? e) WITH-SHIFT
+                                                            :else 1) step)
+          (ikey/arrow-down? key-code) (- num-value (* (cond (dom/with-ctrl? e) WITH-CTRL
+                                                            (dom/with-shift? e) WITH-SHIFT
+                                                            :else 1) step))))
+      (dom/prevent-default! e))))
 
 (defn ^:export inc [step v] (+ step v))
 (defn ^:export dec [step v] (- v step))
-;;(defn ^:export init
-;;  [el]
-;;  (dom/listen! el "keydown" keydown-handler)
-;;  (dom/listen! el "keyup" keyup-handler))
+(defn ^:export init
+  [el]
+  (dom/listen! el "keydown" keydown-handler)
+  (dom/listen! el "keyup" keyup-handler))
 
 ;; 上限限制
 ;; 下限限制

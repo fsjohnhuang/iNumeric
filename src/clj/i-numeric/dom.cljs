@@ -22,6 +22,14 @@
   (let [key-code (.-keyCode e)]
     (if (some? key-code) key-code (.-which e))))
 
+(defn with-ctrl?
+  [e]
+  (.-ctrlKey e))
+
+(defn with-shift?
+  [e]
+  (.-shiftKey e))
+
 
 (defn get-target
   "从EventObject实例获取源元素"
@@ -31,8 +39,10 @@
 
 (defn attr
   "获取元素的attribute属性"
-  [el name]
-  (.getAttribute el (clj->js name)))
+  ([el name] (.getAttribute el (clj->js name)))
+  ([el name default]
+   (let [v (attr el name)]
+     (if (some? v) v default))))
 
 (defn attr!
   "设置元素的attribute属性"

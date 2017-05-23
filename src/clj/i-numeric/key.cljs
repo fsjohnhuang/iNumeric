@@ -46,4 +46,3 @@
 (defn dot? [key-code]
   (or (dot-in-numpad? key-code)
       (dot-in-main? key-code)))
-

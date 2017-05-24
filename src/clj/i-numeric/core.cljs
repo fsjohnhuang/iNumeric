@@ -1,7 +1,7 @@
 (ns i-numeric.core
   (:require [clojure.browser.repl :as repl]
             [i-numeric.dom :as dom]
-            [i-numeric.util :refer [tap nil-or-empty?]]
+            [i-numeric.util :refer [tap nil-or-empty? inspect]]
             [i-numeric.key :as ikey]
             [i-numeric.pred :as pred]))
 
@@ -70,7 +70,7 @@
                       (arrow-down-with-shift? e) (arrow-down-with-shift num-value step)
                       (ikey/arrow-up? key-code) (+ num-value step)
                       (ikey/arrow-down? key-code) (- num-value step))
-        matches (tap (re-matches r-pattern (str changed-val)) "matches")
+        matches (tap (re-matches r-pattern (str changed-val)))
         m-val (if (some? matches) (js/parseFloat (str (nth matches 1) (nth matches 2))) (js/parseFloat min-val))]
     (cond
       (overflow? m-val)
@@ -86,13 +86,30 @@
         (dom/prevent-default! e)
         (dom/prop! el "value" m-val))
 
-      (some? (nth matches 3))
+      (not (nil-or-empty? (nth matches 3)))
       (do
         (dom/prevent-default! e)
         (dom/prop! el "value" m-val)))))
 
+(defn keyup-handler
+  [evt]
+  (let [e (dom/get-evt evt)
+        el (dom/get-target e)
+        attr (partial dom/attr el)
+        value (dom/prop el "value" "")
+        min-val (attr "min")
+        max-val (attr "max")
+        precision (attr "precision" js/Number.MAX_SAFE_INTEGER)
+        r-pattern (js/RegExp (tap (str "^([+-]?[0-9]*)(\\.[0-9]{0," precision "})?(.*)$")))
+        overflow? (partial pred/overflow? min-val max-val)
+        matches (tap (re-matches r-pattern (str value)) "matches")
+        m-val (if (some? matches) (str (nth matches 1) (nth matches 2)) min-val)
+        f-val (cond (pred/gt-max? max-val m-val) max-val (pred/lt-min? min-val m-val) min-val :else m-val)]
+      (dom/prop! el "value" f-val)))
+
 (defn ^:export inc [step v] (+ step v))
 (defn ^:export dec [step v] (- v step))
+
 (defn ^:export init
   [el]
   (dom/listen! el "keydown" keydown-handler))

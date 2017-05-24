@@ -1,18 +1,12 @@
 (ns i-numeric.core
-  (:require [clojure.browser.repl :as repl]
-            [i-numeric.dom :as dom]
-            [i-numeric.util :refer [tap nil-or-empty? inspect]]
+  (:require [i-numeric.dom :as dom]
+            [i-numeric.util :refer [tap nil-or-empty?]]
             [i-numeric.key :as ikey]
             [i-numeric.pred :as pred]))
 
 (enable-console-print!)
 
-;; (defonce conn
-;;   (repl/connect "http://localhost:9000/repl"))
-
 (def ^:const STEP 1)
-(def ^:const WITH-CTRL 0.1)
-(def ^:const WITH-SHIFT 10)
 
 (defn arrow-up-with-alt?
   [e]
@@ -51,69 +45,105 @@
   [evt]
   (let [e (dom/get-evt evt)
         el (dom/get-target e)
-        key-code (dom/get-key-code e)
-        attr (partial dom/attr el)
-        value (dom/prop el "value" "")
-        num-value (js/parseFloat (if (nil-or-empty? value) "0" value))
-        min-val (attr "min")
-        max-val (attr "max")
-        precision (attr "precision" js/Number.MAX_SAFE_INTEGER)
-        r-pattern (js/RegExp (str "^([0-9]*)(?:(\\.[0-9]{0," precision "})(.*))?$"))
-        step (js/parseFloat (attr "step" STEP))
-        overflow? (partial pred/overflow? min-val max-val)
-        changed-val (cond
-                      (ikey/num-key? key-code) (->> key-code ikey/to-num (str value) js/parseFloat)
-                      (ikey/dot? key-code) (js/parseFloat (str value ".0"))
-                      (arrow-up-with-alt? e) (arrow-up-with-alt num-value step)
-                      (arrow-down-with-alt? e) (arrow-down-with-alt num-value step)
-                      (arrow-up-with-shift? e) (arrow-up-with-shift num-value step)
-                      (arrow-down-with-shift? e) (arrow-down-with-shift num-value step)
-                      (ikey/arrow-up? key-code) (+ num-value step)
-                      (ikey/arrow-down? key-code) (- num-value step))
-        matches (tap (re-matches r-pattern (str changed-val)))
-        m-val (if (some? matches) (js/parseFloat (str (nth matches 1) (nth matches 2))) (js/parseFloat min-val))]
+        key-code (dom/get-key-code e)]
     (cond
-      (overflow? m-val)
+      ;; filters invalid key press action
+      (not (pred/valid-key? key-code))
       (dom/prevent-default! e)
 
-      (or (ikey/arrow-up? key-code)
-          (ikey/arrow-down? key-code)
-          (arrow-up-with-shift? e)
-          (arrow-down-with-shift? e)
-          (arrow-up-with-alt? e)
-          (arrow-down-with-alt? e))
-      (do
-        (dom/prevent-default! e)
-        (dom/prop! el "value" m-val))
+      ;; skip when press delete, baskspace, arrow-left, arrow-right
+      (or (ikey/delete? key-code)
+          (ikey/backspace? key-code)
+          (ikey/arrow-left? key-code)
+          (ikey/arrow-right? key-code))
+      true
 
-      (not (nil-or-empty? (nth matches 3)))
-      (do
-        (dom/prevent-default! e)
-        (dom/prop! el "value" m-val)))))
+      (ikey/in-ime? key-code)
+      (.dispatchEvent el (js/KeyboardEvent. "keyup"))
+
+      :else
+      (let [attr (partial dom/attr el)
+            min-val (attr "min")
+            max-val (attr "max")
+            step (js/parseFloat (attr "step" STEP))
+            matcher (partial
+                      re-matches
+                      (as-> (attr "precision" js/Number.MAX_SAFE_INTEGER) $
+                        (str "^([-]?[0-9]*)(?:(\\.[0-9]{0," $ "})(.*))?$")
+                        (js/RegExp $)))
+            overflow? (partial pred/overflow? min-val max-val)
+            value (dom/prop el "value" "")
+            num-value (js/parseFloat (if (nil-or-empty? value) "0" value))
+            value-maybe
+              (cond
+                (or (ikey/num-key? key-code)
+                    (ikey/minus? key-code)) (->> key-code ikey/to-num (str value) js/parseFloat)
+                (ikey/dot? key-code) (str value ".0")
+                (arrow-up-with-alt? e) (arrow-up-with-alt num-value step)
+                (arrow-down-with-alt? e) (arrow-down-with-alt num-value step)
+                (arrow-up-with-shift? e) (arrow-up-with-shift num-value step)
+                (arrow-down-with-shift? e) (arrow-down-with-shift num-value step)
+                (ikey/arrow-up? key-code) (+ num-value step)
+                (ikey/arrow-down? key-code) (- num-value step))
+            matches (tap (matcher (str (tap value-maybe))))
+            final-value (if (some? matches)
+                          (str (nth matches 1) (nth matches 2))
+                          min-val)]
+        (cond
+          (overflow? final-value)
+          (dom/prevent-default! e)
+
+          (or (ikey/arrow-up? key-code)
+              (ikey/arrow-down? key-code)
+              (arrow-up-with-shift? e)
+              (arrow-down-with-shift? e)
+              (arrow-up-with-alt? e)
+              (arrow-down-with-alt? e)
+              (not (nil-or-empty? (nth matches 3))))
+          (do
+            (dom/prevent-default! e)
+            (dom/prop! el "value" final-value)))))))
 
 (defn keyup-handler
   [evt]
   (let [e (dom/get-evt evt)
         el (dom/get-target e)
-        attr (partial dom/attr el)
-        value (dom/prop el "value" "")
-        min-val (attr "min")
-        max-val (attr "max")
-        precision (attr "precision" js/Number.MAX_SAFE_INTEGER)
-        r-pattern (js/RegExp (tap (str "^([+-]?[0-9]*)(\\.[0-9]{0," precision "})?(.*)$")))
-        overflow? (partial pred/overflow? min-val max-val)
-        matches (tap (re-matches r-pattern (str value)) "matches")
-        m-val (if (some? matches) (str (nth matches 1) (nth matches 2)) min-val)
-        f-val (cond (pred/gt-max? max-val m-val) max-val (pred/lt-min? min-val m-val) min-val :else m-val)]
-      (dom/prop! el "value" f-val)))
-
-(defn ^:export inc [step v] (+ step v))
-(defn ^:export dec [step v] (- v step))
+        key-code (dom/get-key-code e)]
+    (if
+      ;; skip when press delete, baskspace, arrow-left, arrow-right
+      (or (ikey/delete? key-code)
+          (ikey/backspace? key-code)
+          (ikey/arrow-left? key-code)
+          (ikey/arrow-right? key-code))
+      true
+      (let [e (dom/get-evt evt)
+            el (dom/get-target e)
+            attr (partial dom/attr el)
+            min-val (attr "min")
+            max-val (attr "max")
+            overflow? (partial pred/overflow? min-val max-val)
+            matcher (partial
+                      re-matches
+                      (as-> (attr "precision" js/Number.MAX_SAFE_INTEGER) $
+                        (str "^([-]?[0-9]*)(?:(\\.[0-9]{0," $ "}))?(.*)$")
+                        (js/RegExp $)))
+            value (tap (dom/prop el "value" "") "value")
+            matches (tap (matcher value))
+            final-value (if (tap (some? matches))
+                          (str (nth matches 1) (nth matches 2))
+                          min-val)]
+          (dom/prop!
+            el
+            "value"
+            (cond
+              (pred/gt-max? max-val final-value) max-val
+              (pred/lt-min? min-val final-value) min-val
+              :else final-value))))))
 
 (defn ^:export init
   [el]
-  (dom/listen! el "keydown" keydown-handler))
-  ;;(dom/listen! el "keyup" keyup-handler))
+  (dom/listen! el "keydown" keydown-handler)
+  (dom/listen! el "keyup" keyup-handler))
 
 (init (-> "input" dom/$ seq first))
 

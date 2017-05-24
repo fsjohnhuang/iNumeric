@@ -23,6 +23,9 @@
   (let [n (- key-code 96)]
     (if (neg? n) (- key-code 48) n)))
 
+(defn arrow-left? [key-code]
+  (= 37 key-code))
+
 (defn arrow-up? [key-code]
   (= 38 key-code))
 
@@ -32,11 +35,24 @@
 (defn arrow-down? [key-code]
   (= 40 key-code))
 
-(defn arrow-left? [key-code]
-  (= 41 key-code))
+(defn arrow-key? [key-code]
+  (or (arrow-up? key-code)
+      (arrow-down? key-code)
+      (arrow-left? key-code)
+      (arrow-right? key-code)))
 
 (defn delete? [key-code]
   (= 46 key-code))
+
+(defn backspace? [key-code]
+  (= 8 key-code))
+
+(defn minus? [key-code]
+  (or (= 109 key-code)
+      (= 189 key-code)))
+
+(defn in-ime? [key-code]
+  (= 229 key-code))
 
 (defn dot-in-numpad? [key-code]
   (= 110 key-code))

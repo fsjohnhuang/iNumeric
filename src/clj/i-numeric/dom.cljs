@@ -26,6 +26,10 @@
   [e]
   (.-ctrlKey e))
 
+(defn with-alt?
+  [e]
+  (.-altKey e))
+
 (defn with-shift?
   [e]
   (.-shiftKey e))
@@ -51,8 +55,10 @@
 
 (defn prop
   "获取元素的属性"
-  [el name]
-  (aget el (clj->js name)))
+  ([el name] (aget el (clj->js name)))
+  ([el name default]
+   (let [v (aget el (clj->js name))]
+     (if (some? v) v default))))
 
 (defn prop!
   "设置元素的属性"
@@ -67,6 +73,14 @@
       (.preventDefault e)
       (set! (.-returnValue e) false))
     true))
+
+(defn listen!
+  "事件监听"
+  [el evt-name handler]
+  (cond
+    (fn? (.-addEventListener el)) (.addEventListener el evt-name handler)
+    (fn? (.-attachEvent el))      (.attachEvent el (str "on" evt-name) handler)
+    :else (aset el (str "on" evt-name) handler)))
 
 (defn $
   "获取元素"

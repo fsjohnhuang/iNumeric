@@ -1,10 +1,11 @@
-(ns i-numeric.key)
+(ns i-numeric.key
+  (:require [i-numeric.util :refer [tap]]))
 
 (defn num-in-main? [key-code]
   (reduce (fn [accu v]
             (and accu (v key-code)))
           true
-          [#(<= 48 %) #(>= 52 %)]))
+          [#(<= 48 %) #(>= 57 %)]))
 
 (defn num-in-numpad? [key-code]
   (reduce (fn [accu v]
@@ -14,7 +15,7 @@
 
 (defn num-key? [key-code]
   (or (num-in-main? key-code)
-      (num-in-numpad key-code)))
+      (num-in-numpad? key-code)))
 
 (defn to-num
   "将keyCode转换为数字"

@@ -74,10 +74,21 @@
             overflow? (partial pred/overflow? min-val max-val)
             value (dom/prop el "value" "")
             num-value (js/parseFloat (if (nil-or-empty? value) "0" value))
+            selection-start (tap (dom/prop el "selectionStart") "s")
+            selection-end (tap (dom/prop el "selectionEnd") "e")
             value-maybe
               (cond
-                (or (ikey/num-key? key-code)
-                    (ikey/minus? key-code)) (->> key-code ikey/to-num (str value) js/parseFloat)
+                (ikey/num-key? key-code) (as-> key-code $
+                                              (ikey/to-num $)
+                                              (tap (str
+                                                (tap (subs value 0 selection-start) "f")
+                                                $
+                                                (tap (subs value (inc selection-end)) "fe")) "aa")
+                                              (js/parseFloat $))
+                (ikey/minus? key-code) (js/parseFloat (str
+                                         (subs value 0 selection-start)
+                                         "-"
+                                         (subs value (inc selection-end))))
                 (ikey/dot? key-code) (str value ".0")
                 (arrow-up-with-alt? e) (arrow-up-with-alt num-value step)
                 (arrow-down-with-alt? e) (arrow-down-with-alt num-value step)
@@ -85,7 +96,7 @@
                 (arrow-down-with-shift? e) (arrow-down-with-shift num-value step)
                 (ikey/arrow-up? key-code) (+ num-value step)
                 (ikey/arrow-down? key-code) (- num-value step))
-            matches (tap (matcher (str (tap value-maybe))))
+            matches (matcher (str (tap value-maybe)))
             final-value (if (some? matches)
                           (str (nth matches 1) (nth matches 2))
                           min-val)]
@@ -119,6 +130,8 @@
       (let [e (dom/get-evt evt)
             el (dom/get-target e)
             attr (partial dom/attr el)
+            selection-start (tap (dom/prop el "selectionStart") "s")
+            selection-end (tap (dom/prop el "selectionEnd") "e")
             min-val (attr "min")
             max-val (attr "max")
             overflow? (partial pred/overflow? min-val max-val)
@@ -127,18 +140,19 @@
                       (as-> (attr "precision" js/Number.MAX_SAFE_INTEGER) $
                         (str "^([-]?[0-9]*)(?:(\\.[0-9]{0," $ "}))?(.*)$")
                         (js/RegExp $)))
-            value (tap (dom/prop el "value" "") "value")
-            matches (tap (matcher value))
-            final-value (if (tap (some? matches))
+            value (dom/prop el "value" "")
+            matches (matcher value)
+            final-value (if (some? matches)
                           (str (nth matches 1) (nth matches 2))
                           min-val)]
-          (dom/prop!
-            el
-            "value"
-            (cond
-              (pred/gt-max? max-val final-value) max-val
-              (pred/lt-min? min-val final-value) min-val
-              :else final-value))))))
+        (dom/prop!
+          el
+          "value"
+          (cond
+            (pred/gt-max? max-val final-value) max-val
+            (pred/lt-min? min-val final-value) min-val
+            :else final-value))
+        (.setSelectionRange el selection-start selection-start)))))
 
 (defn ^:export init
   [el]

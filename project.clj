@@ -1,6 +1,6 @@
-(defproject inumeric "0.1.0-SNAPSHOT"
-  :description "FIXME: write this!"
-  :url "http://example.com/FIXME"
+(defproject i-numeric "0.1.0-SNAPSHOT"
+  :description "i-numeric is a enhanced input number behavior library!"
+  :url "fsjohnhuang.cnblogs.com"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.521"]]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]

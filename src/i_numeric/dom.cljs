@@ -86,3 +86,10 @@
   "获取元素"
   ([slctr] (js/document.querySelectorAll slctr))
   ([slctr ctx] (.querySelectorAll ctx slctr)))
+
+(defn setSelectionRange
+  "设置光标位置"
+  [el start end]
+  (when (and (fn? (.-setSelectionRange el))
+             (some? (.-selectionStart el)))
+    (.setSelectionRange el start end)))

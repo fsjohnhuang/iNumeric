@@ -7,8 +7,10 @@ pom.xml.asc
 /target/
 /checkouts/
 /out/
+/release/
 .lein-deps-sum
 .lein-repl-history
 .lein-plugins/
 .lein-failures
 .nrepl-port
+*.swp

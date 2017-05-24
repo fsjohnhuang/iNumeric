@@ -69,26 +69,30 @@
             matcher (partial
                       re-matches
                       (as-> (attr "precision" js/Number.MAX_SAFE_INTEGER) $
-                        (str "^([-]?[0-9]*)(?:(\\.[0-9]{0," $ "})(.*))?$")
+                        (str "^([-]?[0-9]*)(?:(\\.[0-9]{0," $ "}))?(.*)$")
                         (js/RegExp $)))
             overflow? (partial pred/overflow? min-val max-val)
             value (dom/prop el "value" "")
             num-value (js/parseFloat (if (nil-or-empty? value) "0" value))
-            selection-start (tap (dom/prop el "selectionStart") "s")
-            selection-end (tap (dom/prop el "selectionEnd") "e")
+            selection-start (dom/prop el "selectionStart")
+            selection-end (dom/prop el "selectionEnd")
             value-maybe
               (cond
                 (ikey/num-key? key-code) (as-> key-code $
                                               (ikey/to-num $)
-                                              (tap (str
-                                                (tap (subs value 0 selection-start) "f")
+                                              (str
+                                                (subs value 0 selection-start)
                                                 $
-                                                (tap (subs value (inc selection-end)) "fe")) "aa")
+                                                (subs value selection-end))
                                               (js/parseFloat $))
-                (ikey/minus? key-code) (js/parseFloat (str
-                                         (subs value 0 selection-start)
-                                         "-"
-                                         (subs value (inc selection-end))))
+                (and (ikey/minus? key-code)
+                     (= selection-start 0))
+                (str "-" value)
+
+                (and (ikey/minus? key-code)
+                     (not= selection-start 0))
+                (str value "-")
+
                 (ikey/dot? key-code) (str value ".0")
                 (arrow-up-with-alt? e) (arrow-up-with-alt num-value step)
                 (arrow-down-with-alt? e) (arrow-down-with-alt num-value step)
@@ -96,7 +100,7 @@
                 (arrow-down-with-shift? e) (arrow-down-with-shift num-value step)
                 (ikey/arrow-up? key-code) (+ num-value step)
                 (ikey/arrow-down? key-code) (- num-value step))
-            matches (matcher (str (tap value-maybe)))
+            matches (matcher (str value-maybe))
             final-value (if (some? matches)
                           (str (nth matches 1) (nth matches 2))
                           min-val)]
@@ -113,7 +117,8 @@
               (not (nil-or-empty? (nth matches 3))))
           (do
             (dom/prevent-default! e)
-            (dom/prop! el "value" final-value)))))))
+            (dom/prop! el "value" final-value)
+            (dom/setSelectionRange el selection-start selection-start)))))))
 
 (defn keyup-handler
   [evt]
@@ -130,8 +135,8 @@
       (let [e (dom/get-evt evt)
             el (dom/get-target e)
             attr (partial dom/attr el)
-            selection-start (tap (dom/prop el "selectionStart") "s")
-            selection-end (tap (dom/prop el "selectionEnd") "e")
+            selection-start (dom/prop el "selectionStart")
+            selection-end (dom/prop el "selectionEnd")
             min-val (attr "min")
             max-val (attr "max")
             overflow? (partial pred/overflow? min-val max-val)
@@ -152,10 +157,11 @@
             (pred/gt-max? max-val final-value) max-val
             (pred/lt-min? min-val final-value) min-val
             :else final-value))
-        (.setSelectionRange el selection-start selection-start)))))
+        (dom/setSelectionRange el selection-start selection-start)))))
 
 (defn ^:export init
   [el]
+  (set! (.. el -style -imeMode) "disabled")
   (dom/listen! el "keydown" keydown-handler)
   (dom/listen! el "keyup" keyup-handler))
 

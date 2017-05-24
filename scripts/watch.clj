@@ -1,6 +1,6 @@
 (require '[cljs.build.api :as b])
 
-(b/watch "src/clj"
+(b/watch "src/"
   {:main 'i-numeric.core
-   :output-to "out/clj/inumeric.js"
-   :output-dir "out/clj/"})
+   :output-to "out/i_numeric.js"
+   :output-dir "out/"})

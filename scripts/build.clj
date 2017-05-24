@@ -3,10 +3,10 @@
 (println "Building ...")
 
 (let [start (System/nanoTime)]
-  (b/build "src/clj"
+  (b/build "src/"
     {:main 'i-numeric.core
-     :output-to "out/clj/inumeric.js"
-     :output-dir "out/clj"
+     :output-to "out/i_numeric.js"
+     :output-dir "out/"
      :verbose true})
   (println "... done. Elapsed" (/ (- (System/nanoTime) start) 1e9) "seconds"))
 

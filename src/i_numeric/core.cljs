@@ -45,10 +45,14 @@
   [evt]
   (let [e (dom/get-evt evt)
         el (dom/get-target e)
-        key-code (dom/get-key-code e)]
+        key-code (dom/get-key-code e)
+        attr (partial dom/attr el)
+        min-val (attr "min")]
     (cond
-      ;; filters invalid key press action
-      (not (pred/valid-key? key-code))
+      ;; filters invalid key press action or negative mark when the value of attribute min is positive.
+      (or (not (pred/valid-key? key-code))
+          (and (<= 0 min-val)
+               (ikey/minus? key-code)))
       (dom/prevent-default! e)
 
       ;; skip when press delete, baskspace, arrow-left, arrow-right
@@ -58,13 +62,13 @@
           (ikey/arrow-right? key-code))
       true
 
+      ;; fire keyup event when do key pressing in IME
       (ikey/in-ime? key-code)
-      (.dispatchEvent el (js/KeyboardEvent. "keyup"))
+      (dom/dispatch-event el "keyup")
 
+      ;; the hardest work is comming :D
       :else
-      (let [attr (partial dom/attr el)
-            min-val (attr "min")
-            max-val (attr "max")
+      (let [max-val (attr "max")
             step (js/parseFloat (attr "step" STEP))
             matcher (partial
                       re-matches
@@ -165,8 +169,8 @@
 
 (defn ^:export init
   [el]
-  (set! (.. el -style -imeMode) "disabled")
-  (set! (.-type el) "text")
+  (set! (.. el -style -imeMode) "disabled") ;; IE下禁用输入法
+  (set! (.-type el) "text")                 ;; 为控制光标，需将type=number转换为type=text
   (dom/listen! el "keydown" keydown-handler)
   (dom/listen! el "keyup" keyup-handler))
 
@@ -181,6 +185,7 @@
 ;; 场景:输入法,拦截keyup作补救
 
 ;; 拦截例外, 0-9, ., delete, baskspace, arrow left, arrow right
+;; 拦截符号, min为0时不允许输入负号
 ;; 附加，arrow-up -> (partial inc step), arrow-down -> (partial dec step)
 ;;       arrow-up 的默认行为是光标移动到行首
 ;;       arrow-down 的默认行为是光标移动到行尾

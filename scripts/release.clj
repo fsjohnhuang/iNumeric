@@ -8,5 +8,6 @@
      :output-dir "release"
      :optimizations :advanced
      :pretty-print false
+     :output-wrapper true
      :verbose true})
   (println "... done. Elapsed" (/ (- (System/nanoTime) start) 1e9) "seconds"))

@@ -86,11 +86,15 @@
                                                 (subs value selection-end))
                                               (js/parseFloat $))
                 (and (ikey/minus? key-code)
-                     (= selection-start 0))
+                     (or
+                       (nil? selection-start)
+                       (= selection-start 0)))
                 (str "-" value)
 
                 (and (ikey/minus? key-code)
-                     (not= selection-start 0))
+                     (and
+                       (some? selection-start)
+                       (not= selection-start 0)))
                 (str value "-")
 
                 (ikey/dot? key-code) (str value ".0")
@@ -162,10 +166,11 @@
 (defn ^:export init
   [el]
   (set! (.. el -style -imeMode) "disabled")
+  (set! (.-type el) "text")
   (dom/listen! el "keydown" keydown-handler)
   (dom/listen! el "keyup" keyup-handler))
 
-(init (-> "input" dom/$ seq first))
+;;(init (-> "input" dom/$ seq first))
 
 ;; 上限限制
 ;; 下限限制

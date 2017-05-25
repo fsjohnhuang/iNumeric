@@ -93,3 +93,16 @@
   (when (and (fn? (.-setSelectionRange el))
              (some? (.-selectionStart el)))
     (.setSelectionRange el start end)))
+
+(defn dispatch-event
+  [el evt-name]
+  (cond
+    ;; DOM 2
+    (fn? js/document.createEvent)
+    (let [evt (js/document.createEvent "KeyboardEvent")]
+      (.initEvent evt evt-name true true)
+      (.dispatchEvent el evt))
+    ;; DOM 3
+    :else
+    (let [evt (js/KeyboardEvent. evt-name)]
+      (.dispatchEvent el evt))))

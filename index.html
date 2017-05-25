@@ -6,6 +6,9 @@
     </head>
     <body>
 			<input type="number" min="-100" max="100" step="2" precision="2">
-        <script src="out/i_numeric.js" type="text/javascript"></script>
+      <script src="out/i_numeric.js" type="text/javascript"></script>
+			<script>
+				i_numeric.core.init(document.querySelector('input'))
+			</script>
     </body>
 </html>

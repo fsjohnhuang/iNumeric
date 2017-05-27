@@ -47,12 +47,15 @@
         el (dom/get-target e)
         key-code (dom/get-key-code e)
         attr (partial dom/attr el)
-        min-val (attr "min")]
+        min-val (attr "min")
+        precision (js/parseFloat (attr "precision" js/Number.MAX_SAFE_INTEGER))]
     (cond
       ;; filters invalid key press action or negative mark when the value of attribute min is positive.
       (or (not (pred/valid-key? key-code))
           (and (<= 0 min-val)
-               (ikey/minus? key-code)))
+               (ikey/minus? key-code))
+          (and (= 0 precision)
+               (ikey/dot? key-code)))
       (dom/prevent-default! e)
 
       ;; skip when press delete, baskspace, arrow-left, arrow-right
@@ -72,7 +75,7 @@
             step (js/parseFloat (attr "step" STEP))
             matcher (partial
                       re-matches
-                      (as-> (attr "precision" js/Number.MAX_SAFE_INTEGER) $
+                      (as-> precision $
                         (str "^([-]?[0-9]*)(?:(\\.[0-9]{0," $ "}))?(.*)$")
                         (js/RegExp $)))
             overflow? (partial pred/overflow? min-val max-val)
@@ -186,6 +189,7 @@
 
 ;; 拦截例外, 0-9, ., delete, baskspace, arrow left, arrow right
 ;; 拦截符号, min为0时不允许输入负号
+;; 拦截小数点, precision为0时不允许输入小数点
 ;; 附加，arrow-up -> (partial inc step), arrow-down -> (partial dec step)
 ;;       arrow-up 的默认行为是光标移动到行首
 ;;       arrow-down 的默认行为是光标移动到行尾

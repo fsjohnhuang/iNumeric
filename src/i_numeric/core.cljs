@@ -4,6 +4,8 @@
             [i-numeric.key :as ikey]
             [i-numeric.pred :as pred]))
 
+(defn trace [x] (println x) x)
+
 (enable-console-print!)
 
 (def ^:const STEP 1)
@@ -143,6 +145,7 @@
           (ikey/arrow-left? key-code)
           (ikey/arrow-right? key-code))
       true
+      ;; check value
       (let [e (dom/get-evt evt)
             el (dom/get-target e)
             attr (partial dom/attr el)
@@ -154,8 +157,8 @@
             matcher (partial
                       re-matches
                       (as-> (attr "precision" js/Number.MAX_SAFE_INTEGER) $
-                        (str "^([-]?[0-9]*)(?:(\\.[0-9]{0," $ "}))?(.*)$")
-                        (js/RegExp $)))
+                        (str "^(" (if (>= min-val 0) "" "[-]?") "[0-9]*)" (if (< 0 $) (str "(?:(\\.[0-9]{0," $ "}))?") "()") "(.*)$")
+                        (js/RegExp (trace $))))
             value (dom/prop el "value" "")
             matches (matcher value)
             final-value (if (some? matches)
